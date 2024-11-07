@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TONCS Mini App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Welcome to TONCS Mini App Game</h1>
+
+    <div id="register">
+        <h2>Register New User</h2>
+        <input type="text" id="username" placeholder="Enter Username">
+        <button onclick="registerUser()">Register</button>
+    </div>
+
+    <div id="lobby">
+        <h2>Lobby</h2>
+        <button onclick="getLobby()">Get Available Battles</button>
+        <div id="lobbyList"></div>
+    </div>
+
+    <div id="createBattle">
+        <h2>Create a New Battle</h2>
+        <input type="text" id="battleName" placeholder="Enter Battle Name">
+        <button onclick="createBattle()">Create Battle</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
