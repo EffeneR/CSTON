@@ -4,16 +4,17 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files from the public directory
-app.use(express.static('public'));
+// Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -31,18 +32,11 @@ const playerSchema = new mongoose.Schema({
 
 const Player = mongoose.model('Player', playerSchema);
 
-// Battle Schema and Model (for managing battles)
-const battleSchema = new mongoose.Schema({
-    name: String,
-    createdAt: { type: Date, default: Date.now }
-});
-
-const Battle = mongoose.model('Battle', battleSchema);
-
 // Verify Telegram User & Issue JWT
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
+        // Telegram login verification can be added here
 
         let player = await Player.findOne({ telegramId: data.id });
         if (!player) {
@@ -75,4 +69,20 @@ app.get('/api/player', async (req, res) => {
         if (!player) {
             return res.status(404).json({ message: 'Player not found' });
         }
- 
+        res.json(player);
+    } catch (error) {
+        console.error('Player retrieval error:', error);
+        res.status(401).json({ message: 'Invalid or expired token' });
+    }
+});
+
+// Dashboard Endpoint
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
