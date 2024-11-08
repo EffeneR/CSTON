@@ -1,21 +1,17 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
-const axios = require('axios');
 const path = require('path');
 
 const app = express();
 
 // Middlewares
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: 'https://cston.onrender.com', credentials: true })); // Update to production URL
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to MongoDB
@@ -38,8 +34,8 @@ const Player = mongoose.model('Player', playerSchema);
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
-        // Telegram login verification can be added here
 
+        // Telegram login verification logic should be implemented here
         let player = await Player.findOne({ telegramId: data.id });
         if (!player) {
             player = new Player({
@@ -51,7 +47,7 @@ app.post('/api/auth/telegram', async (req, res) => {
         }
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token });
+        res.redirect(`/dashboard?token=${token}`);
     } catch (error) {
         console.error('Telegram authentication error:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -78,9 +74,18 @@ app.get('/api/player', async (req, res) => {
     }
 });
 
-// Serve dashboard page
+// Dashboard Route
 app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+    const token = req.query.token;
+    if (!token) {
+        return res.send('Authentication failed. No token provided.');
+    }
+    res.send(`<h1>Welcome to your dashboard!</h1><p>Token: ${token}</p>`);
+});
+
+// Root Route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start the server
