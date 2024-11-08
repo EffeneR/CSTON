@@ -4,15 +4,16 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
-const path = require('path');
 
 const app = express();
 
 // Middlewares
-app.use(cors({ origin: 'https://cston.onrender.com', credentials: true })); // Update to production URL
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve static files from the public directory
+app.use(express.static('public'));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -30,12 +31,19 @@ const playerSchema = new mongoose.Schema({
 
 const Player = mongoose.model('Player', playerSchema);
 
+// Battle Schema and Model (for managing battles)
+const battleSchema = new mongoose.Schema({
+    name: String,
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Battle = mongoose.model('Battle', battleSchema);
+
 // Verify Telegram User & Issue JWT
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
 
-        // Telegram login verification logic should be implemented here
         let player = await Player.findOne({ telegramId: data.id });
         if (!player) {
             player = new Player({
@@ -47,7 +55,7 @@ app.post('/api/auth/telegram', async (req, res) => {
         }
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.redirect(`/dashboard?token=${token}`);
+        res.json({ token });
     } catch (error) {
         console.error('Telegram authentication error:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -67,29 +75,4 @@ app.get('/api/player', async (req, res) => {
         if (!player) {
             return res.status(404).json({ message: 'Player not found' });
         }
-        res.json(player);
-    } catch (error) {
-        console.error('Player retrieval error:', error);
-        res.status(401).json({ message: 'Invalid or expired token' });
-    }
-});
-
-// Dashboard Route
-app.get('/dashboard', (req, res) => {
-    const token = req.query.token;
-    if (!token) {
-        return res.send('Authentication failed. No token provided.');
-    }
-    res.send(`<h1>Welcome to your dashboard!</h1><p>Token: ${token}</p>`);
-});
-
-// Root Route
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Start the server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+ 
