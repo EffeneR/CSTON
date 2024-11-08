@@ -1,23 +1,24 @@
 document.getElementById('login-button').addEventListener('click', async () => {
     try {
+        // Make a request to the backend for Telegram login
         const response = await fetch('/api/auth/telegram', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                // Send the data necessary for Telegram authentication
-                id: '<user-id>', // Replace with actual user ID (you may get this from Telegram SDK)
-                username: '<username>', // Replace with actual username
-                hash: '<hash>' // Replace with the hash for verification
+                id: '<user-id>', // Replace with actual user ID from Telegram login
+                username: '<username>', // Replace with actual username from Telegram login
+                hash: '<hash>' // Replace with the hash received for verification
             })
         });
 
         if (response.ok) {
             const { token } = await response.json();
-            // Save token and proceed
+            // Save token to localStorage for future use
             localStorage.setItem('token', token);
-            window.location.href = '/dashboard'; // Redirect to some dashboard or profile page after successful login
+            // Redirect to the dashboard
+            window.location.href = '/dashboard';
         } else {
             console.error('Login failed:', response.statusText);
             alert('Login failed. Please try again.');
