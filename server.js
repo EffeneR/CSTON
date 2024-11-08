@@ -5,16 +5,17 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
+const axios = require('axios');
 const path = require('path');
 
 const app = express();
 
 // Middlewares
-app.use(cors({ origin: 'http://your-production-domain.com', credentials: true })); // Update to reflect your production environment
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files from /public directory
+// Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to MongoDB
@@ -37,9 +38,7 @@ const Player = mongoose.model('Player', playerSchema);
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
-
-        // Add your Telegram login verification logic here
-        // For example: validate the hash using Telegram's method to verify the user identity
+        // Telegram login verification can be added here
 
         let player = await Player.findOne({ telegramId: data.id });
         if (!player) {
@@ -79,9 +78,9 @@ app.get('/api/player', async (req, res) => {
     }
 });
 
-// Serve index.html on root
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Serve dashboard page
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // Start the server
