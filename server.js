@@ -5,12 +5,14 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
-const axios = require('axios');
+const path = require('path');
 
 const app = express();
 
 // Middlewares
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+// Update CORS to reflect your production environment
+envCorsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+app.use(cors({ origin: envCorsOrigin, credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -29,6 +31,13 @@ const playerSchema = new mongoose.Schema({
 });
 
 const Player = mongoose.model('Player', playerSchema);
+
+// Root Route to Serve Frontend Files
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Verify Telegram User & Issue JWT
 app.post('/api/auth/telegram', async (req, res) => {
