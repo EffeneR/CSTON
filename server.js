@@ -5,16 +5,17 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
-const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 
 // Middlewares
-// Update CORS to reflect your production environment
-envCorsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
-app.use(cors({ origin: envCorsOrigin, credentials: true }));
+app.use(cors({ origin: '*', credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Static Files Middleware
+app.use(express.static('public'));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -32,18 +33,28 @@ const playerSchema = new mongoose.Schema({
 
 const Player = mongoose.model('Player', playerSchema);
 
-// Root Route to Serve Frontend Files
-app.use(express.static(path.join(__dirname, 'public')));
+// Function to Verify Telegram Data
+function verifyTelegramData(data) {
+    const secretKey = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
+    const checkString = Object.keys(data)
+        .filter(key => key !== 'hash')
+        .sort()
+        .map(key => `${key}=${data[key]}`)
+        .join('\n');
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+    const hash = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
+    return hash === data.hash;
+}
 
 // Verify Telegram User & Issue JWT
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
-        // Telegram login verification can be added here
+
+        // Verify Telegram Data
+        if (!verifyTelegramData(req.body)) {
+            return res.status(403).json({ message: 'Invalid Telegram data' });
+        }
 
         let player = await Player.findOne({ telegramId: data.id });
         if (!player) {
