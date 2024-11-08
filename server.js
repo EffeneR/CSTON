@@ -4,17 +4,13 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
-const path = require('path');
 
 const app = express();
 
 // Middlewares
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static('public'));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -32,18 +28,20 @@ const playerSchema = new mongoose.Schema({
 
 const Player = mongoose.model('Player', playerSchema);
 
-// Verify Telegram User & Issue JWT
+// Telegram Authentication Route
 app.post('/api/auth/telegram', async (req, res) => {
     try {
-        const { hash, ...data } = req.body;
-        // Telegram login verification can be added here
+        const { hash, id, username, photo_url } = req.body;
 
-        let player = await Player.findOne({ telegramId: data.id });
+        // Here you should verify the hash using Telegram's API for security purposes.
+        // Assuming verification is successful:
+
+        let player = await Player.findOne({ telegramId: id });
         if (!player) {
             player = new Player({
-                telegramId: data.id,
-                username: data.username,
-                avatar: data.photo_url,
+                telegramId: id,
+                username: username,
+                avatar: photo_url,
             });
             await player.save();
         }
@@ -56,29 +54,9 @@ app.post('/api/auth/telegram', async (req, res) => {
     }
 });
 
-// Player Profile Endpoint
-app.get('/api/player', async (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-        return res.status(401).json({ message: 'No token provided' });
-    }
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const player = await Player.findById(decoded.id);
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-        }
-        res.json(player);
-    } catch (error) {
-        console.error('Player retrieval error:', error);
-        res.status(401).json({ message: 'Invalid or expired token' });
-    }
-});
-
 // Dashboard Endpoint
 app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+    res.sendFile(__dirname + '/public/dashboard.html');
 });
 
 // Start the server
