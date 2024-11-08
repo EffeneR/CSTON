@@ -1,0 +1,72 @@
+1. **index.html**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSTON Miniapp</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <h1>Welcome to CSTON Miniapp</h1>
+        <button id="login-button">Login with Telegram</button>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
+```
+
+2. **style.css**
+
+```css
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+#app {
+    text-align: center;
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+```
+
+3. **app.js**
+
+```javascript
+document.getElementById('login-button').addEventListener('click', () => {
+    // Redirect user to Telegram authentication endpoint
+    window.location.href = '/api/auth/telegram';
+});
+```
+
+### Instructions for Deploying
+
+- Ensure that these files (`index.html`, `style.css`, `app.js`) are located in the `/public` directory of your project repository.
+- These files are static resources, and Express is configured to serve them correctly through the updated `server.js` code.
+- You should now be able to deploy, and your server should properly serve this frontend as well.
