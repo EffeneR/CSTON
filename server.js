@@ -5,17 +5,17 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
-const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 
 // Middlewares
-app.use(cors({ origin: '*', credentials: true }));
+app.use(cors({ origin: 'http://your-production-domain.com', credentials: true })); // Update to reflect your production environment
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Static Files Middleware
-app.use(express.static('public'));
+// Serve static files from /public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -33,28 +33,13 @@ const playerSchema = new mongoose.Schema({
 
 const Player = mongoose.model('Player', playerSchema);
 
-// Function to Verify Telegram Data
-function verifyTelegramData(data) {
-    const secretKey = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
-    const checkString = Object.keys(data)
-        .filter(key => key !== 'hash')
-        .sort()
-        .map(key => `${key}=${data[key]}`)
-        .join('\n');
-
-    const hash = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
-    return hash === data.hash;
-}
-
 // Verify Telegram User & Issue JWT
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
 
-        // Verify Telegram Data
-        if (!verifyTelegramData(req.body)) {
-            return res.status(403).json({ message: 'Invalid Telegram data' });
-        }
+        // Add your Telegram login verification logic here
+        // For example: validate the hash using Telegram's method to verify the user identity
 
         let player = await Player.findOne({ telegramId: data.id });
         if (!player) {
@@ -92,6 +77,11 @@ app.get('/api/player', async (req, res) => {
         console.error('Player retrieval error:', error);
         res.status(401).json({ message: 'Invalid or expired token' });
     }
+});
+
+// Serve index.html on root
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start the server
