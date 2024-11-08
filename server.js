@@ -1,4 +1,3 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -6,6 +5,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 const axios = require('axios');
+const TelegramBot = require('node-telegram-bot-api'); // Add Telegram Bot API
 
 const app = express();
 
@@ -18,6 +18,23 @@ app.use(bodyParser.urlencoded({ extended: true }));
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('Connected to MongoDB'))
     .catch((err) => console.error('MongoDB connection error:', err));
+
+// Initialize Telegram Bot
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+
+// Handle /start command from Telegram
+bot.onText(/\/start/, (msg) => {
+    const chatId = msg.chat.id;
+    bot.sendMessage(chatId, 'Welcome to the CSTON Miniapp! Use the available options to continue.');
+});
+
+// Handle other messages or commands
+bot.on('message', (msg) => {
+    const chatId = msg.chat.id;
+    if (msg.text !== '/start') {
+        bot.sendMessage(chatId, 'I am here to assist you with CSTON Miniapp. Type /start to begin.');
+    }
+});
 
 // Player Schema and Model
 const playerSchema = new mongoose.Schema({
@@ -34,7 +51,6 @@ const Player = mongoose.model('Player', playerSchema);
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
-        // Telegram login verification can be added here
 
         let player = await Player.findOne({ telegramId: data.id });
         if (!player) {
@@ -73,6 +89,9 @@ app.get('/api/player', async (req, res) => {
         res.status(401).json({ message: 'Invalid or expired token' });
     }
 });
+
+// Serve Static Files
+app.use(express.static('public'));
 
 // Start the server
 const PORT = process.env.PORT || 5000;

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSTON Miniapp</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <h1>Welcome to CSTON Miniapp</h1>
+        <button id="login-button">Login with Telegram</button>
+
+        <div id="user-registration">
+            <input type="text" id="username" placeholder="Enter username">
+            <button onclick="registerUser()">Register User</button>
+        </div>
+
+        <div id="create-battle">
+            <input type="text" id="battleName" placeholder="Enter battle name">
+            <button onclick="createBattle()">Create Battle</button>
+        </div>
+
+        <div id="lobbyList"></div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
