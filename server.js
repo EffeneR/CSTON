@@ -10,7 +10,7 @@ const path = require('path');
 const app = express();
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -46,7 +46,7 @@ const teamSchema = new mongoose.Schema({
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Verify Telegram and Issue JWT
+// Telegram WebApp Login Handler
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
@@ -70,70 +70,9 @@ app.post('/api/auth/telegram', async (req, res) => {
         }
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token });
+        res.json({ token, username: player.username });
     } catch (error) {
         console.error('Telegram authentication error:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-// Check Team Status
-app.get('/api/player/team', async (req, res) => {
-    try {
-        const token = req.headers.authorization.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const player = await Player.findById(decoded.id).populate('teamId');
-
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-        }
-
-        if (!player.teamId) {
-            return res.status(200).json({ hasTeam: false });
-        }
-
-        res.status(200).json({ hasTeam: true, team: player.teamId });
-    } catch (error) {
-        console.error('Error fetching team:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-// Create a Team
-app.post('/api/team/create', async (req, res) => {
-    try {
-        const { token, name, nationality } = req.body;
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        const player = await Player.findById(decoded.id);
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-        }
-
-        if (player.teamId) {
-            return res.status(400).json({ message: 'Team already exists for this player.' });
-        }
-
-        const npcPlayers = Array.from({ length: 5 }, (_, i) => ({
-            name: `NPC-${i + 1}`,
-            position: ['Forward', 'Midfielder', 'Defender', 'Goalkeeper'][i % 4],
-            skillLevel: Math.floor(Math.random() * 20) + 1
-        }));
-
-        const team = new Team({
-            name,
-            nationality,
-            players: npcPlayers,
-            ownerId: player._id
-        });
-        await team.save();
-
-        player.teamId = team._id;
-        await player.save();
-
-        res.status(200).json({ message: 'Team created successfully', team });
-    } catch (error) {
-        console.error('Error creating team:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
