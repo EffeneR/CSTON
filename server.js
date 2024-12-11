@@ -46,17 +46,18 @@ const teamSchema = new mongoose.Schema({
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Verify Telegram and Issue JWT
-app.post('/api/auth/telegram', async (req, res) => {
+// Telegram Authentication and JWT Issuance
+app.get('/api/auth/telegram', async (req, res) => {
     try {
-        const { hash, ...data } = req.body;
+        const { hash, ...data } = req.query;
 
         // Validate Payload
         const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
         const checkString = Object.keys(data).sort().map(key => `${key}=${data[key]}`).join('\n');
         const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
+
         if (hash !== hmac) {
-            return res.status(403).json({ message: 'Invalid authentication' });
+            return res.status(403).send('Invalid Telegram authentication.');
         }
 
         let player = await Player.findOne({ telegramId: data.id });
@@ -70,10 +71,12 @@ app.post('/api/auth/telegram', async (req, res) => {
         }
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token });
+
+        // Redirect to dashboard with token and username
+        res.redirect(`/dashboard?token=${token}&username=${data.username}`);
     } catch (error) {
         console.error('Telegram authentication error:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).send('Internal server error');
     }
 });
 
@@ -141,12 +144,11 @@ app.post('/api/team/create', async (req, res) => {
 // Serve Static Files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve Frontend for Root Route
+// Serve Frontend Routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Serve Dashboard Route
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
