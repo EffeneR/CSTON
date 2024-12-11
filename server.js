@@ -19,8 +19,10 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
     .then(() => console.log('Connected to MongoDB'))
     .catch((err) => console.error('MongoDB connection error:', err));
 
-// Initialize Telegram Bot
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+// Initialize Telegram Bot with webhook
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
+const webhookURL = `${process.env.SERVER_URL}/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+bot.setWebHook(webhookURL);
 
 // Unified Player Schema
 const playerSchema = new mongoose.Schema({
@@ -100,51 +102,14 @@ app.post('/api/matches/join', async (req, res) => {
     }
 });
 
-// Complete a Match
-app.post('/api/matches/complete', async (req, res) => {
-    try {
-        const { matchId } = req.body;
-        const match = await Match.findById(matchId);
-
-        if (!match) {
-            return res.status(404).json({ message: 'Match not found' });
-        }
-
-        const winner = match.players[Math.floor(Math.random() * match.players.length)];
-        match.status = 'completed';
-        match.winner = winner;
-
-        await match.save();
-        res.json({ message: 'Match completed', match });
-    } catch (error) {
-        console.error('Error completing match:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+// Webhook for Telegram Bot
+app.post(`/bot${process.env.TELEGRAM_BOT_TOKEN}`, (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
 });
-
-// Telegram Bot Commands
-bot.onText(/\/join/, async (msg) => {
-    const chatId = msg.chat.id;
-    const username = msg.from.username;
-
-    if (!username) {
-        return bot.sendMessage(chatId, 'You must set a Telegram username to join matches.');
-    }
-
-    try {
-        const response = await axios.post('http://localhost:5000/api/matches/join', { username });
-        bot.sendMessage(chatId, `You joined the match! Match ID: ${response.data.match._id}`);
-    } catch (error) {
-        console.error('Error joining match:', error);
-        bot.sendMessage(chatId, 'Failed to join match. Please try again.');
-    }
-});
-
-// Serve Static Files
-app.use(express.static('public'));
 
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on ${process.env.SERVER_URL}`);
 });
