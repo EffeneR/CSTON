@@ -1,12 +1,33 @@
-<section id="create-team" style="display: none;">
-    <h2>Create Your Team</h2>
-    <label for="team-name">Team Name:</label>
-    <input type="text" id="team-name" placeholder="Enter team name">
-    <label for="team-nationality">Nationality:</label>
-    <input type="text" id="team-nationality" placeholder="Enter nationality">
-    <button onclick="createTeam()">Create Team</button>
-</section>
-
-<section id="main-content" style="display: none;">
-    <!-- Main content for logged-in users -->
-</section>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSTON Mini App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Welcome to the CSTON Mini App</h1>
+            <p>Manage your team and compete in matches!</p>
+        </header>
+        <main>
+            <section id="team-status">
+                <h2>Your Team</h2>
+                <div id="team-info">
+                    <!-- Team info will be dynamically loaded here -->
+                </div>
+                <button id="create-team-btn" style="display: none;">Create a Team</button>
+            </section>
+            <section id="matches">
+                <h2>Matches</h2>
+                <ul id="active-matches"></ul>
+                <h3>Completed Matches</h3>
+                <ul id="completed-matches"></ul>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
