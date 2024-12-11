@@ -46,18 +46,17 @@ const teamSchema = new mongoose.Schema({
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Telegram Authentication and JWT Issuance
-app.get('/api/auth/telegram', async (req, res) => {
+// Verify Telegram and Issue JWT
+app.post('/api/auth/telegram', async (req, res) => {
     try {
-        const { hash, ...data } = req.query;
+        const { hash, ...data } = req.body;
 
         // Validate Payload
         const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
         const checkString = Object.keys(data).sort().map(key => `${key}=${data[key]}`).join('\n');
         const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
-
         if (hash !== hmac) {
-            return res.status(403).send('Invalid Telegram authentication.');
+            return res.status(403).json({ message: 'Invalid authentication' });
         }
 
         let player = await Player.findOne({ telegramId: data.id });
@@ -71,13 +70,16 @@ app.get('/api/auth/telegram', async (req, res) => {
         }
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        // Redirect to dashboard with token and username
-        res.redirect(`/dashboard?token=${token}&username=${data.username}`);
+        res.json({ token, username: player.username });
     } catch (error) {
         console.error('Telegram authentication error:', error);
-        res.status(500).send('Internal server error');
+        res.status(500).json({ message: 'Internal server error' });
     }
+});
+
+// Dashboard Route
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // Check Team Status
@@ -102,56 +104,8 @@ app.get('/api/player/team', async (req, res) => {
     }
 });
 
-// Create a Team
-app.post('/api/team/create', async (req, res) => {
-    try {
-        const { token, name, nationality } = req.body;
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        const player = await Player.findById(decoded.id);
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-        }
-
-        if (player.teamId) {
-            return res.status(400).json({ message: 'Team already exists for this player.' });
-        }
-
-        const npcPlayers = Array.from({ length: 5 }, (_, i) => ({
-            name: `NPC-${i + 1}`,
-            position: ['Forward', 'Midfielder', 'Defender', 'Goalkeeper'][i % 4],
-            skillLevel: Math.floor(Math.random() * 20) + 1
-        }));
-
-        const team = new Team({
-            name,
-            nationality,
-            players: npcPlayers,
-            ownerId: player._id
-        });
-        await team.save();
-
-        player.teamId = team._id;
-        await player.save();
-
-        res.status(200).json({ message: 'Team created successfully', team });
-    } catch (error) {
-        console.error('Error creating team:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
 // Serve Static Files
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Serve Frontend Routes
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
 
 // Start Server
 const PORT = process.env.PORT || 5000;
