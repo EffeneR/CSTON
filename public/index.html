@@ -3,37 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini App</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>CSTON Mini App</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav>
-        <a href="#leaderboard">Leaderboard</a>
-        <a href="#matches">Match Info</a>
-    </nav>
-
     <header>
         <h1>Welcome to the CSTON Mini App</h1>
     </header>
-
+    <nav>
+        <ul>
+            <li><a href="#leaderboard">Leaderboard</a></li>
+            <li><a href="#match-info">Match Info</a></li>
+        </ul>
+    </nav>
     <main>
         <section id="leaderboard">
             <h2>Leaderboard</h2>
-            <ul id="leaderboard-container"></ul>
+            <ul id="leaderboard-container" class="card-container">
+                <!-- Populated dynamically -->
+            </ul>
         </section>
-
-        <section id="matches">
+        <section id="match-info">
             <h2>Match Info</h2>
-            <div class="matches-container">
+            <div class="match-section">
                 <h3>Active Matches</h3>
-                <ul id="active-matches"></ul>
-
+                <ul id="active-matches" class="card-container">
+                    <!-- Populated dynamically -->
+                </ul>
+            </div>
+            <div class="match-section">
                 <h3>Completed Matches</h3>
-                <ul id="completed-matches"></ul>
+                <ul id="completed-matches" class="card-container">
+                    <!-- Populated dynamically -->
+                </ul>
             </div>
         </section>
     </main>
-
+    <footer>
+        <p>&copy; 2024 CSTON Game Mini App. All rights reserved.</p>
+    </footer>
     <script src="app.js"></script>
 </body>
 </html>
