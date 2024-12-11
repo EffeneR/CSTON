@@ -3,14 +3,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const bodyParser = require('body-parser');
 const crypto = require('crypto');
+const bodyParser = require('body-parser');
 const path = require('path');
 
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -46,17 +46,17 @@ const teamSchema = new mongoose.Schema({
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Telegram WebApp Login Handler
-app.post('/api/auth/telegram', async (req, res) => {
+// Handle Telegram Authentication (GET request)
+app.get('/api/auth/telegram', async (req, res) => {
     try {
-        const { hash, ...data } = req.body;
+        const { hash, ...data } = req.query;
 
         // Validate Payload
         const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
         const checkString = Object.keys(data).sort().map(key => `${key}=${data[key]}`).join('\n');
         const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
         if (hash !== hmac) {
-            return res.status(403).json({ message: 'Invalid authentication' });
+            return res.status(403).send('Invalid authentication');
         }
 
         let player = await Player.findOne({ telegramId: data.id });
@@ -70,10 +70,12 @@ app.post('/api/auth/telegram', async (req, res) => {
         }
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token, username: player.username });
+
+        // Redirect back to the app with the token
+        res.redirect(`/dashboard?token=${token}&username=${data.username}`);
     } catch (error) {
         console.error('Telegram authentication error:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).send('Internal server error');
     }
 });
 
