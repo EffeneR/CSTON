@@ -5,6 +5,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 
@@ -135,6 +136,14 @@ app.post('/api/team/create', async (req, res) => {
         console.error('Error creating team:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
+});
+
+// Serve Static Files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve Frontend for Root Route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start Server
