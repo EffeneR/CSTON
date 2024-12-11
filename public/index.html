@@ -1,47 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSTON Mini App</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <header>
-        <h1>Welcome to the CSTON Mini App</h1>
-    </header>
-    <nav>
-        <ul>
-            <li><a href="#leaderboard">Leaderboard</a></li>
-            <li><a href="#match-info">Match Info</a></li>
-        </ul>
-    </nav>
-    <main>
-        <section id="leaderboard">
-            <h2>Leaderboard</h2>
-            <ul id="leaderboard-container" class="card-container">
-                <!-- Populated dynamically -->
-            </ul>
-        </section>
-        <section id="match-info">
-            <h2>Match Info</h2>
-            <div class="match-section">
-                <h3>Active Matches</h3>
-                <ul id="active-matches" class="card-container">
-                    <!-- Populated dynamically -->
-                </ul>
-            </div>
-            <div class="match-section">
-                <h3>Completed Matches</h3>
-                <ul id="completed-matches" class="card-container">
-                    <!-- Populated dynamically -->
-                </ul>
-            </div>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2024 CSTON Game Mini App. All rights reserved.</p>
-    </footer>
-    <script src="app.js"></script>
-</body>
-</html>
+<section id="create-team" style="display: none;">
+    <h2>Create Your Team</h2>
+    <label for="team-name">Team Name:</label>
+    <input type="text" id="team-name" placeholder="Enter team name">
+    <label for="team-nationality">Nationality:</label>
+    <input type="text" id="team-nationality" placeholder="Enter nationality">
+    <button onclick="createTeam()">Create Team</button>
+</section>
+
+<section id="main-content" style="display: none;">
+    <!-- Main content for logged-in users -->
+</section>
