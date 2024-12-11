@@ -13,6 +13,10 @@
             <p>Manage your team and compete in matches!</p>
         </header>
         <main>
+            <div id="auth-section">
+                <button id="login-btn" style="display: none;">Login with Telegram</button>
+                <p id="logged-in-as" style="display: none;">Logged in as <span id="username"></span> <button id="logout-btn">Logout</button></p>
+            </div>
             <section id="team-status">
                 <h2>Your Team</h2>
                 <div id="team-info">
@@ -22,15 +26,11 @@
             </section>
             <section id="matches">
                 <h2>Matches</h2>
-                <h3>Active Matches</h3>
                 <ul id="active-matches"></ul>
                 <h3>Completed Matches</h3>
                 <ul id="completed-matches"></ul>
             </section>
         </main>
-        <footer>
-            <p>Logged in as <span id="user-username"></span> | <button id="logout-btn">Logout</button></p>
-        </footer>
     </div>
     <script src="app.js"></script>
 </body>
