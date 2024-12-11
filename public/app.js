@@ -1,62 +1,102 @@
-const API_BASE_URL = 'https://cston.onrender.com/api';
+const API_BASE_URL = 'https://cston.onrender.com/api'; // Ensure this matches your Render deployment URL
 
 function clearUserSession() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
-    initializeApp();
-}
-
-function storeTokenFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const username = urlParams.get('username');
-    if (token && username) {
-        localStorage.setItem('token', token);
-        localStorage.setItem('username', username);
-        window.history.replaceState({}, document.title, '/'); // Clean URL
-    }
+    window.location.href = '/';
 }
 
 async function fetchTeamStatus() {
-    const token = localStorage.getItem('token');
-    if (!token) return { hasTeam: false };
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
+        const response = await fetch(`${API_BASE_URL}/player/team`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        return response.json();
+    } catch (error) {
+        console.error('Error fetching team status:', error);
+        return { hasTeam: false };
+    }
+}
 
-    const response = await fetch(`${API_BASE_URL}/player/team`, {
-        headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.json();
+async function createTeam(name, nationality) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/team/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, name, nationality }),
+        });
+        return response.json();
+    } catch (error) {
+        console.error('Error creating team:', error);
+    }
 }
 
 function setupUI() {
-    const loginBtn = document.getElementById('login-btn');
+    const createTeamBtn = document.getElementById('create-team-btn');
     const logoutBtn = document.getElementById('logout-btn');
-    const loggedInAs = document.getElementById('logged-in-as');
     const usernameSpan = document.getElementById('username');
-
-    loginBtn.addEventListener('click', () => {
-        const redirectUrl = encodeURIComponent(window.location.origin);
-        const tgLoginUrl = `https://t.me/CSTON_BOT?start=auth_${redirectUrl}`;
-        window.open(tgLoginUrl, '_blank'); // Open Telegram login flow
-    });
 
     logoutBtn.addEventListener('click', () => {
         clearUserSession();
     });
+
+    createTeamBtn.addEventListener('click', async () => {
+        const teamName = prompt('Enter your team name:');
+        const teamNationality = prompt('Enter your team nationality:');
+        if (teamName && teamNationality) {
+            const response = await createTeam(teamName, teamNationality);
+            if (response.team) {
+                alert('Team created successfully!');
+                loadTeamStatus();
+            } else {
+                alert(response.message || 'Failed to create team');
+            }
+        }
+    });
 }
 
-async function initializeApp() {
-    storeTokenFromURL(); // Check for token in URL and store it
-    const token = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
+async function loadTeamStatus() {
+    const teamStatus = await fetchTeamStatus();
+    const createTeamBtn = document.getElementById('create-team-btn');
+    const teamInfoDiv = document.getElementById('team-info');
 
-    if (token && username) {
-        document.getElementById('telegram-login-container').style.display = 'none';
-        document.getElementById('logged-in-as').style.display = 'block';
-        document.getElementById('username').textContent = username;
+    if (teamStatus.hasTeam) {
+        createTeamBtn.style.display = 'none';
+        teamInfoDiv.innerHTML = `
+            <h3>${teamStatus.team.name}</h3>
+            <p>Nationality: ${teamStatus.team.nationality}</p>
+            <ul>
+                ${teamStatus.team.players.map(
+                    (player) =>
+                        `<li>${player.name} (${player.position}) - Skill: ${player.skillLevel}</li>`
+                ).join('')}
+            </ul>
+        `;
     } else {
-        document.getElementById('telegram-login-container').style.display = 'block';
-        document.getElementById('logged-in-as').style.display = 'none';
+        createTeamBtn.style.display = 'block';
+        teamInfoDiv.innerHTML = '<p>You do not have a team yet.</p>';
     }
 }
 
-initializeApp();
+async function initializeApp() {
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    const loggedInAs = document.getElementById('logged-in-as');
+    const usernameSpan = document.getElementById('username');
+
+    if (token && username) {
+        loggedInAs.style.display = 'block';
+        usernameSpan.textContent = username;
+
+        await loadTeamStatus();
+    } else {
+        window.location.href = '/';
+    }
+}
+
+if (window.location.pathname === '/dashboard') {
+    initializeApp();
+}
