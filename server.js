@@ -5,51 +5,52 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const TelegramBot = require('node-telegram-bot-api');
 
 const app = express();
 
-// Middlewares
+// Middleware
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Connect to MongoDB
+// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('Connected to MongoDB'))
     .catch((err) => console.error('MongoDB connection error:', err));
 
-// Initialize Telegram Bot with webhook
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
-const webhookURL = `${process.env.SERVER_URL}/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-bot.setWebHook(webhookURL);
-
-// Unified Player Schema
+// Player Schema
 const playerSchema = new mongoose.Schema({
     telegramId: String,
     username: String,
     avatar: String,
     matchesPlayed: { type: Number, default: 0 },
     rank: { type: String, default: "Rookie" },
+    teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
     lastLogin: { type: Date, default: Date.now }
 });
 const Player = mongoose.model('Player', playerSchema);
 
-// Match Schema
-const matchSchema = new mongoose.Schema({
-    players: [String],
-    winner: { type: String, default: null },
-    status: { type: String, default: "pending" },
-    createdAt: { type: Date, default: Date.now }
+// Team Schema
+const teamSchema = new mongoose.Schema({
+    name: String,
+    nationality: String,
+    players: [
+        {
+            name: String,
+            position: String,
+            skillLevel: { type: Number, default: 20 }
+        }
+    ],
+    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' }
 });
-const Match = mongoose.model('Match', matchSchema);
+const Team = mongoose.model('Team', teamSchema);
 
-// Telegram Authentication Endpoint
+// Verify Telegram and Issue JWT
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
 
-        // Validate payload
+        // Validate Payload
         const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
         const checkString = Object.keys(data).sort().map(key => `${key}=${data[key]}`).join('\n');
         const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
@@ -62,7 +63,7 @@ app.post('/api/auth/telegram', async (req, res) => {
             player = new Player({
                 telegramId: data.id,
                 username: data.username,
-                avatar: data.photo_url,
+                avatar: data.photo_url
             });
             await player.save();
         }
@@ -75,41 +76,69 @@ app.post('/api/auth/telegram', async (req, res) => {
     }
 });
 
-// Create or Join a Match
-app.post('/api/matches/join', async (req, res) => {
+// Check Team Status
+app.get('/api/player/team', async (req, res) => {
     try {
-        const { username } = req.body;
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const player = await Player.findById(decoded.id).populate('teamId');
 
-        if (!username) {
-            return res.status(400).json({ message: 'Username is required' });
+        if (!player) {
+            return res.status(404).json({ message: 'Player not found' });
         }
 
-        let match = await Match.findOne({ status: 'pending' });
-        if (!match) {
-            match = new Match({ players: [username], status: 'pending' });
-        } else {
-            if (match.players.includes(username)) {
-                return res.status(400).json({ message: 'You are already in this match' });
-            }
-            match.players.push(username);
+        if (!player.teamId) {
+            return res.status(200).json({ hasTeam: false });
         }
 
-        await match.save();
-        res.json({ message: 'Joined match', match });
+        res.status(200).json({ hasTeam: true, team: player.teamId });
     } catch (error) {
-        console.error('Error joining match:', error);
+        console.error('Error fetching team:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-// Webhook for Telegram Bot
-app.post(`/bot${process.env.TELEGRAM_BOT_TOKEN}`, (req, res) => {
-    bot.processUpdate(req.body);
-    res.sendStatus(200);
+// Create a Team
+app.post('/api/team/create', async (req, res) => {
+    try {
+        const { token, name, nationality } = req.body;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const player = await Player.findById(decoded.id);
+        if (!player) {
+            return res.status(404).json({ message: 'Player not found' });
+        }
+
+        if (player.teamId) {
+            return res.status(400).json({ message: 'Team already exists for this player.' });
+        }
+
+        const npcPlayers = Array.from({ length: 5 }, (_, i) => ({
+            name: `NPC-${i + 1}`,
+            position: ['Forward', 'Midfielder', 'Defender', 'Goalkeeper'][i % 4],
+            skillLevel: Math.floor(Math.random() * 20) + 1
+        }));
+
+        const team = new Team({
+            name,
+            nationality,
+            players: npcPlayers,
+            ownerId: player._id
+        });
+        await team.save();
+
+        player.teamId = team._id;
+        await player.save();
+
+        res.status(200).json({ message: 'Team created successfully', team });
+    } catch (error) {
+        console.error('Error creating team:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Server running on ${process.env.SERVER_URL}`);
+    console.log(`Server running on http://localhost:${PORT}`);
 });
