@@ -1,54 +1,104 @@
-const API_BASE_URL = 'https://cston.onrender.com/api';
+const API_BASE_URL = 'https://cston.onrender.com/api'; // Ensure this matches your Render deployment URL
 
-// Fetch Player Team Status
-async function checkTeamStatus() {
-    const token = localStorage.getItem('jwt');
-    if (!token) return null;
-
+async function fetchTeamStatus() {
     try {
+        const token = localStorage.getItem('token');
         const response = await fetch(`${API_BASE_URL}/player/team`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.json();
     } catch (error) {
-        console.error('Error checking team status:', error);
-        return null;
+        console.error('Error fetching team status:', error);
+        return { hasTeam: false };
     }
 }
 
-// Create a Team
-async function createTeam() {
-    const token = localStorage.getItem('jwt');
-    const name = document.querySelector('#team-name').value;
-    const nationality = document.querySelector('#team-nationality').value;
-
+async function createTeam(name, nationality) {
     try {
+        const token = localStorage.getItem('token');
         const response = await fetch(`${API_BASE_URL}/team/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, name, nationality })
         });
-
-        const data = await response.json();
-        if (data.message === 'Team created successfully') {
-            alert('Your team has been created!');
-            initializeApp();
-        }
+        return response.json();
     } catch (error) {
         console.error('Error creating team:', error);
     }
 }
 
-// Initialize App
-async function initializeApp() {
-    const teamStatus = await checkTeamStatus();
-    if (!teamStatus || !teamStatus.hasTeam) {
-        document.querySelector('#create-team').style.display = 'block';
-        document.querySelector('#main-content').style.display = 'none';
-    } else {
-        document.querySelector('#create-team').style.display = 'none';
-        document.querySelector('#main-content').style.display = 'block';
+async function fetchMatches() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/matches`);
+        return response.json();
+    } catch (error) {
+        console.error('Error fetching matches:', error);
+        return [];
     }
+}
+
+function setupUI() {
+    const createTeamBtn = document.getElementById('create-team-btn');
+    const teamInfoDiv = document.getElementById('team-info');
+
+    createTeamBtn.addEventListener('click', async () => {
+        const teamName = prompt('Enter your team name:');
+        const teamNationality = prompt('Enter your team nationality:');
+        if (teamName && teamNationality) {
+            const response = await createTeam(teamName, teamNationality);
+            if (response.team) {
+                alert('Team created successfully!');
+                loadTeamStatus();
+            } else {
+                alert(response.message || 'Failed to create team');
+            }
+        }
+    });
+}
+
+async function loadTeamStatus() {
+    const teamStatus = await fetchTeamStatus();
+    const createTeamBtn = document.getElementById('create-team-btn');
+    const teamInfoDiv = document.getElementById('team-info');
+
+    if (teamStatus.hasTeam) {
+        createTeamBtn.style.display = 'none';
+        teamInfoDiv.innerHTML = `
+            <h3>${teamStatus.team.name}</h3>
+            <p>Nationality: ${teamStatus.team.nationality}</p>
+            <ul>
+                ${teamStatus.team.players.map(player => `
+                    <li>${player.name} (${player.position}) - Skill: ${player.skillLevel}</li>
+                `).join('')}
+            </ul>
+        `;
+    } else {
+        createTeamBtn.style.display = 'block';
+        teamInfoDiv.innerHTML = '<p>You do not have a team yet.</p>';
+    }
+}
+
+async function loadMatches() {
+    const matches = await fetchMatches();
+    const activeMatchesContainer = document.getElementById('active-matches');
+    const completedMatchesContainer = document.getElementById('completed-matches');
+
+    const activeMatches = matches.filter(match => match.status === 'pending');
+    const completedMatches = matches.filter(match => match.status === 'completed');
+
+    activeMatchesContainer.innerHTML = activeMatches.map(match => `
+        <li>Players: ${match.players.join(', ')}</li>
+    `).join('');
+
+    completedMatchesContainer.innerHTML = completedMatches.map(match => `
+        <li>Winner: ${match.winner}</li>
+    `).join('');
+}
+
+async function initializeApp() {
+    setupUI();
+    await loadTeamStatus();
+    await loadMatches();
 }
 
 initializeApp();
