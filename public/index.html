@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSTON Mini App</title>
     <link rel="stylesheet" href="style.css">
+    <script async src="https://telegram.org/js/telegram-widget.js?21" 
+            data-telegram-login="CSTON_BOT" 
+            data-size="large" 
+            data-radius="10" 
+            data-auth-url="https://cston.onrender.com/api/auth/telegram" 
+            data-request-access="write">
+    </script>
 </head>
 <body>
     <div id="app">
@@ -14,7 +21,7 @@
         </header>
         <main>
             <div id="auth-section">
-                <button id="login-btn" style="display: none;">Login with Telegram</button>
+                <div id="telegram-login-container"></div>
                 <p id="logged-in-as" style="display: none;">Logged in as <span id="username"></span> <button id="logout-btn">Logout</button></p>
             </div>
             <section id="team-status">
