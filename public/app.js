@@ -1,10 +1,17 @@
 const API_BASE_URL = 'https://cston.onrender.com/api'; // Ensure this matches your Render deployment URL
 
+function clearUserSession() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    initializeApp();
+}
+
 async function fetchTeamStatus() {
     try {
         const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
         const response = await fetch(`${API_BASE_URL}/player/team`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` }
         });
         return response.json();
     } catch (error) {
@@ -19,16 +26,11 @@ async function createTeam(name, nationality) {
         const response = await fetch(`${API_BASE_URL}/team/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, name, nationality }),
+            body: JSON.stringify({ token, name, nationality })
         });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Error creating team');
-        }
-        return data;
+        return response.json();
     } catch (error) {
         console.error('Error creating team:', error);
-        alert(error.message || 'Failed to create team.');
     }
 }
 
@@ -43,25 +45,34 @@ async function fetchMatches() {
 }
 
 function setupUI() {
-    const createTeamBtn = document.getElementById('create-team-btn');
+    const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
+    const loggedInAs = document.getElementById('logged-in-as');
+    const usernameSpan = document.getElementById('username');
+    const createTeamBtn = document.getElementById('create-team-btn');
     const teamInfoDiv = document.getElementById('team-info');
+
+    loginBtn.addEventListener('click', () => {
+        const tgLoginUrl = `https://t.me/YOUR_TELEGRAM_BOT?start=${encodeURIComponent(window.location.href)}`;
+        window.location.href = tgLoginUrl;
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        clearUserSession();
+    });
 
     createTeamBtn.addEventListener('click', async () => {
         const teamName = prompt('Enter your team name:');
         const teamNationality = prompt('Enter your team nationality:');
         if (teamName && teamNationality) {
             const response = await createTeam(teamName, teamNationality);
-            if (response?.team) {
+            if (response.team) {
                 alert('Team created successfully!');
                 loadTeamStatus();
+            } else {
+                alert(response.message || 'Failed to create team');
             }
         }
-    });
-
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('token');
-        location.reload();
     });
 }
 
@@ -76,13 +87,9 @@ async function loadTeamStatus() {
             <h3>${teamStatus.team.name}</h3>
             <p>Nationality: ${teamStatus.team.nationality}</p>
             <ul>
-                ${teamStatus.team.players
-                    .map(
-                        (player) => `
+                ${teamStatus.team.players.map(player => `
                     <li>${player.name} (${player.position}) - Skill: ${player.skillLevel}</li>
-                `
-                    )
-                    .join('')}
+                `).join('')}
             </ul>
         `;
     } else {
@@ -96,36 +103,36 @@ async function loadMatches() {
     const activeMatchesContainer = document.getElementById('active-matches');
     const completedMatchesContainer = document.getElementById('completed-matches');
 
-    const activeMatches = matches.filter((match) => match.status === 'pending');
-    const completedMatches = matches.filter((match) => match.status === 'completed');
+    const activeMatches = matches.filter(match => match.status === 'pending');
+    const completedMatches = matches.filter(match => match.status === 'completed');
 
-    activeMatchesContainer.innerHTML = activeMatches
-        .map(
-            (match) => `
+    activeMatchesContainer.innerHTML = activeMatches.map(match => `
         <li>Players: ${match.players.join(', ')}</li>
-    `
-        )
-        .join('');
+    `).join('');
 
-    completedMatchesContainer.innerHTML = completedMatches
-        .map(
-            (match) => `
+    completedMatchesContainer.innerHTML = completedMatches.map(match => `
         <li>Winner: ${match.winner}</li>
-    `
-        )
-        .join('');
+    `).join('');
 }
 
 async function initializeApp() {
     const token = localStorage.getItem('token');
-    if (!token) {
-        alert('Please log in via Telegram to continue.');
-        window.location.href = '/'; // Redirect to login
-        return;
+    const username = localStorage.getItem('username');
+    const loginBtn = document.getElementById('login-btn');
+    const loggedInAs = document.getElementById('logged-in-as');
+    const usernameSpan = document.getElementById('username');
+
+    if (token && username) {
+        loginBtn.style.display = 'none';
+        loggedInAs.style.display = 'block';
+        usernameSpan.textContent = username;
+
+        await loadTeamStatus();
+        await loadMatches();
+    } else {
+        loginBtn.style.display = 'block';
+        loggedInAs.style.display = 'none';
     }
-    setupUI();
-    await loadTeamStatus();
-    await loadMatches();
 }
 
 initializeApp();
