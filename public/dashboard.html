@@ -3,13 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSTON Dashboard</title>
-    <link rel="stylesheet" href="/style.css">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="dashboard">
-        <h1>Welcome to the CSTON Dashboard</h1>
-        <p>You have successfully logged in with Telegram!</p>
+        <header>
+            <h1>Welcome to Your Dashboard</h1>
+        </header>
+        <main>
+            <section id="user-info">
+                <h2>User Info</h2>
+                <p>Username: <span id="username"></span></p>
+            </section>
+            <section id="team-status">
+                <h2>Your Team</h2>
+                <div id="team-info">
+                    <!-- Team info will be dynamically loaded here -->
+                </div>
+                <button id="create-team-btn" style="display: none;">Create a Team</button>
+            </section>
+            <section id="matches">
+                <h2>Matches</h2>
+                <ul id="active-matches"></ul>
+                <h3>Completed Matches</h3>
+                <ul id="completed-matches"></ul>
+            </section>
+        </main>
     </div>
+    <script src="app.js"></script>
 </body>
 </html>
