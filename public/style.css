@@ -50,4 +50,69 @@ nav ul li a {
 
 nav ul li a:hover {
     background-color: #1e40af;
-  
+    border-radius: 5px;
+}
+
+/* Main Section */
+main {
+    flex: 1;
+    padding: 2rem;
+}
+
+h2 {
+    color: #60a5fa;
+    border-bottom: 2px solid #2563eb;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+/* Card Container */
+.card-container {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.card-container li {
+    background: #334155;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-container li:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card-container li span {
+    font-size: 1rem;
+    color: #e2e8f0;
+    margin-bottom: 0.5rem;
+}
+
+/* Footer */
+footer {
+    background-color: #1e293b;
+    color: #94a3b8;
+    text-align: center;
+    padding: 1rem 0;
+    margin-top: auto;
+    box-shadow: 0px -4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    nav ul {
+        flex-direction: column;
+    }
+
+    nav ul li a {
+        margin: 0.5rem 0;
+    }
+}
