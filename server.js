@@ -3,14 +3,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const bodyParser = require('body-parser');
+const crypto = require('crypto');
 const path = require('path');
 
 const app = express();
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -46,17 +46,17 @@ const teamSchema = new mongoose.Schema({
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Handle Telegram Authentication (GET request)
-app.get('/api/auth/telegram', async (req, res) => {
+// Verify Telegram and Issue JWT
+app.post('/api/auth/telegram', async (req, res) => {
     try {
-        const { hash, ...data } = req.query;
+        const { hash, ...data } = req.body;
 
         // Validate Payload
         const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
         const checkString = Object.keys(data).sort().map(key => `${key}=${data[key]}`).join('\n');
         const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
         if (hash !== hmac) {
-            return res.status(403).send('Invalid authentication');
+            return res.status(403).json({ message: 'Invalid authentication' });
         }
 
         let player = await Player.findOne({ telegramId: data.id });
@@ -70,12 +70,71 @@ app.get('/api/auth/telegram', async (req, res) => {
         }
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        // Redirect back to the app with the token
-        res.redirect(`/dashboard?token=${token}&username=${data.username}`);
+        res.json({ token });
     } catch (error) {
         console.error('Telegram authentication error:', error);
-        res.status(500).send('Internal server error');
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Check Team Status
+app.get('/api/player/team', async (req, res) => {
+    try {
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const player = await Player.findById(decoded.id).populate('teamId');
+
+        if (!player) {
+            return res.status(404).json({ message: 'Player not found' });
+        }
+
+        if (!player.teamId) {
+            return res.status(200).json({ hasTeam: false });
+        }
+
+        res.status(200).json({ hasTeam: true, team: player.teamId });
+    } catch (error) {
+        console.error('Error fetching team:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Create a Team
+app.post('/api/team/create', async (req, res) => {
+    try {
+        const { token, name, nationality } = req.body;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        const player = await Player.findById(decoded.id);
+        if (!player) {
+            return res.status(404).json({ message: 'Player not found' });
+        }
+
+        if (player.teamId) {
+            return res.status(400).json({ message: 'Team already exists for this player.' });
+        }
+
+        const npcPlayers = Array.from({ length: 5 }, (_, i) => ({
+            name: `NPC-${i + 1}`,
+            position: ['Forward', 'Midfielder', 'Defender', 'Goalkeeper'][i % 4],
+            skillLevel: Math.floor(Math.random() * 20) + 1
+        }));
+
+        const team = new Team({
+            name,
+            nationality,
+            players: npcPlayers,
+            ownerId: player._id
+        });
+        await team.save();
+
+        player.teamId = team._id;
+        await player.save();
+
+        res.status(200).json({ message: 'Team created successfully', team });
+    } catch (error) {
+        console.error('Error creating team:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 
@@ -85,6 +144,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Serve Frontend for Root Route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Serve Dashboard Route
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // Start Server
