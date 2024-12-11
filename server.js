@@ -22,7 +22,7 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 // Initialize Telegram Bot
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 
-// Player Schema and Model
+// Unified Player Schema
 const playerSchema = new mongoose.Schema({
     telegramId: String,
     username: String,
@@ -31,20 +31,18 @@ const playerSchema = new mongoose.Schema({
     rank: { type: String, default: "Rookie" },
     lastLogin: { type: Date, default: Date.now }
 });
-
 const Player = mongoose.model('Player', playerSchema);
 
-// Match Schema and Model
+// Match Schema
 const matchSchema = new mongoose.Schema({
-    players: [String], // Telegram usernames
+    players: [String],
     winner: { type: String, default: null },
-    status: { type: String, default: "pending" }, // pending, completed
+    status: { type: String, default: "pending" },
     createdAt: { type: Date, default: Date.now }
 });
-
 const Match = mongoose.model('Match', matchSchema);
 
-// Verify Telegram User & Issue JWT
+// Telegram Authentication Endpoint
 app.post('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.body;
@@ -75,80 +73,77 @@ app.post('/api/auth/telegram', async (req, res) => {
     }
 });
 
-// Player Profile Endpoint
-app.get('/api/player', async (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-        return res.status(401).json({ message: 'No token provided' });
-    }
-
+// Create or Join a Match
+app.post('/api/matches/join', async (req, res) => {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const player = await Player.findById(decoded.id);
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-        }
-        res.json(player);
-    } catch (error) {
-        console.error('Player retrieval error:', error);
-        res.status(401).json({ message: 'Invalid or expired token' });
-    }
-});
+        const { username } = req.body;
 
-// Create New Match
-app.post('/api/matches', async (req, res) => {
-    try {
-        const { players } = req.body;
-        if (players.length < 2) {
-            return res.status(400).json({ message: 'At least 2 players are required' });
+        if (!username) {
+            return res.status(400).json({ message: 'Username is required' });
         }
 
-        const match = new Match({ players });
+        let match = await Match.findOne({ status: 'pending' });
+        if (!match) {
+            match = new Match({ players: [username], status: 'pending' });
+        } else {
+            if (match.players.includes(username)) {
+                return res.status(400).json({ message: 'You are already in this match' });
+            }
+            match.players.push(username);
+        }
+
         await match.save();
-        res.json({ message: 'Match created', match });
+        res.json({ message: 'Joined match', match });
     } catch (error) {
-        console.error('Match creation error:', error);
+        console.error('Error joining match:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-// List Matches
-app.get('/api/matches', async (req, res) => {
+// Complete a Match
+app.post('/api/matches/complete', async (req, res) => {
     try {
-        const matches = await Match.find();
-        res.json(matches);
+        const { matchId } = req.body;
+        const match = await Match.findById(matchId);
+
+        if (!match) {
+            return res.status(404).json({ message: 'Match not found' });
+        }
+
+        const winner = match.players[Math.floor(Math.random() * match.players.length)];
+        match.status = 'completed';
+        match.winner = winner;
+
+        await match.save();
+        res.json({ message: 'Match completed', match });
     } catch (error) {
-        console.error('Match retrieval error:', error);
+        console.error('Error completing match:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
 // Telegram Bot Commands
-bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Welcome to the CSTON Miniapp! Use /register to join matches.');
-});
-
-bot.onText(/\/register/, async (msg) => {
+bot.onText(/\/join/, async (msg) => {
     const chatId = msg.chat.id;
     const username = msg.from.username;
 
     if (!username) {
-        return bot.sendMessage(chatId, 'You must set a Telegram username to register.');
+        return bot.sendMessage(chatId, 'You must set a Telegram username to join matches.');
     }
 
-    let player = await Player.findOne({ username });
-    if (!player) {
-        return bot.sendMessage(chatId, 'You must log in first using the Miniapp.');
+    try {
+        const response = await axios.post('http://localhost:5000/api/matches/join', { username });
+        bot.sendMessage(chatId, `You joined the match! Match ID: ${response.data.match._id}`);
+    } catch (error) {
+        console.error('Error joining match:', error);
+        bot.sendMessage(chatId, 'Failed to join match. Please try again.');
     }
-
-    bot.sendMessage(chatId, 'You are now registered for the next match!');
 });
 
 // Serve Static Files
 app.use(express.static('public'));
 
-// Start the server
+// Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
