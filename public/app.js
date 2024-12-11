@@ -13,7 +13,7 @@ async function fetchTeamStatus() {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
         const response = await fetch(`${API_BASE_URL}/player/team`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
         });
         return response.json();
     } catch (error) {
@@ -28,7 +28,7 @@ async function createTeam(name, nationality) {
         const response = await fetch(`${API_BASE_URL}/team/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, name, nationality })
+            body: JSON.stringify({ token, name, nationality }),
         });
         return response.json();
     } catch (error) {
@@ -57,7 +57,7 @@ function setupUI() {
     loginBtn.addEventListener('click', () => {
         const redirectUrl = encodeURIComponent(window.location.origin);
         const tgLoginUrl = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=auth_${redirectUrl}`;
-        window.location.href = tgLoginUrl;
+        window.open(tgLoginUrl, '_blank'); // Open the login flow in a new tab
     });
 
     logoutBtn.addEventListener('click', () => {
@@ -90,9 +90,10 @@ async function loadTeamStatus() {
             <h3>${teamStatus.team.name}</h3>
             <p>Nationality: ${teamStatus.team.nationality}</p>
             <ul>
-                ${teamStatus.team.players.map(player => `
-                    <li>${player.name} (${player.position}) - Skill: ${player.skillLevel}</li>
-                `).join('')}
+                ${teamStatus.team.players.map(
+                    (player) =>
+                        `<li>${player.name} (${player.position}) - Skill: ${player.skillLevel}</li>`
+                ).join('')}
             </ul>
         `;
     } else {
@@ -106,16 +107,16 @@ async function loadMatches() {
     const activeMatchesContainer = document.getElementById('active-matches');
     const completedMatchesContainer = document.getElementById('completed-matches');
 
-    const activeMatches = matches.filter(match => match.status === 'pending');
-    const completedMatches = matches.filter(match => match.status === 'completed');
+    const activeMatches = matches.filter((match) => match.status === 'pending');
+    const completedMatches = matches.filter((match) => match.status === 'completed');
 
-    activeMatchesContainer.innerHTML = activeMatches.map(match => `
-        <li>Players: ${match.players.join(', ')}</li>
-    `).join('');
+    activeMatchesContainer.innerHTML = activeMatches.map(
+        (match) => `<li>Players: ${match.players.join(', ')}</li>`
+    ).join('');
 
-    completedMatchesContainer.innerHTML = completedMatches.map(match => `
-        <li>Winner: ${match.winner}</li>
-    `).join('');
+    completedMatchesContainer.innerHTML = completedMatches.map(
+        (match) => `<li>Winner: ${match.winner}</li>`
+    ).join('');
 }
 
 async function initializeApp() {
