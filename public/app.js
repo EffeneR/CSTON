@@ -1,5 +1,7 @@
 const API_BASE_URL = 'https://cston.onrender.com/api'; // Ensure this matches your Render deployment URL
 
+const TELEGRAM_BOT_USERNAME = 'CSTON_BOT'; // Your Telegram bot's username
+
 function clearUserSession() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
@@ -53,7 +55,8 @@ function setupUI() {
     const teamInfoDiv = document.getElementById('team-info');
 
     loginBtn.addEventListener('click', () => {
-        const tgLoginUrl = `https://t.me/YOUR_TELEGRAM_BOT?start=${encodeURIComponent(window.location.href)}`;
+        const redirectUrl = encodeURIComponent(window.location.origin);
+        const tgLoginUrl = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=auth_${redirectUrl}`;
         window.location.href = tgLoginUrl;
     });
 
