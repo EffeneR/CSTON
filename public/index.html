@@ -3,27 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSTON Miniapp</title>
-    <link rel="stylesheet" href="/style.css">
+    <title>Mini App</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="app">
-        <h1>Welcome to CSTON Miniapp</h1>
-        <button id="login-button">Login with Telegram</button>
+    <nav>
+        <a href="#leaderboard">Leaderboard</a>
+        <a href="#matches">Match Info</a>
+    </nav>
 
-        <div id="user-registration">
-            <input type="text" id="username" placeholder="Enter username">
-            <button onclick="registerUser()">Register User</button>
-        </div>
+    <header>
+        <h1>Welcome to the CSTON Mini App</h1>
+    </header>
 
-        <div id="create-battle">
-            <input type="text" id="battleName" placeholder="Enter battle name">
-            <button onclick="createBattle()">Create Battle</button>
-        </div>
+    <main>
+        <section id="leaderboard">
+            <h2>Leaderboard</h2>
+            <ul id="leaderboard-container"></ul>
+        </section>
 
-        <div id="lobbyList"></div>
-    </div>
+        <section id="matches">
+            <h2>Match Info</h2>
+            <div class="matches-container">
+                <h3>Active Matches</h3>
+                <ul id="active-matches"></ul>
 
-    <script src="/app.js"></script>
+                <h3>Completed Matches</h3>
+                <ul id="completed-matches"></ul>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
 </body>
 </html>
