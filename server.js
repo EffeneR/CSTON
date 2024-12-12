@@ -77,31 +77,9 @@ app.post('/api/auth/telegram', async (req, res) => {
     }
 });
 
-// Dashboard Route
+// Serve Dashboard Route
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-// Check Team Status
-app.get('/api/player/team', async (req, res) => {
-    try {
-        const token = req.headers.authorization.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const player = await Player.findById(decoded.id).populate('teamId');
-
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-        }
-
-        if (!player.teamId) {
-            return res.status(200).json({ hasTeam: false });
-        }
-
-        res.status(200).json({ hasTeam: true, team: player.teamId });
-    } catch (error) {
-        console.error('Error fetching team:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
 });
 
 // Serve Static Files
