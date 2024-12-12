@@ -1,97 +1,91 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const crypto = require('crypto');
 const bodyParser = require('body-parser');
+const path = require('path');
+const Manager = require('./models/manager');
+const Player = require('./models/player');
+
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-}).then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
-// Models
-const Manager = require('./models/Manager');
-const Player = require('./models/Player');
+mongoose
+    .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('Connected to MongoDB'))
+    .catch((err) => console.error('Failed to connect to MongoDB', err));
 
 // Routes
 app.get('/', (req, res) => {
-    res.send(`
-        <h1>Welcome to the CSTON Mini App</h1>
-        <a href="/auth/telegram">
-            <button>Login with Telegram</button>
-        </a>
-    `);
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Telegram Authentication Route
-app.get('/auth/telegram', async (req, res) => {
-    const { id, hash, first_name, username, photo_url, auth_date } = req.query;
+app.post('/api/register', async (req, res) => {
+    const { telegramId, username, teamName, nationality } = req.body;
 
-    // Step 1: Validate Telegram data
-    const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
-    const checkString = Object.keys(req.query)
-        .filter((key) => key !== 'hash')
-        .sort()
-        .map((key) => `${key}=${req.query[key]}`)
-        .join('\n');
-    const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
+    try {
+        let manager = await Manager.findOne({ telegramId });
 
-    if (hmac !== hash) {
-        return res.status(403).send('Unauthorized: Invalid Telegram authentication.');
-    }
+        if (!manager) {
+            manager = new Manager({
+                telegramId,
+                username,
+                teamName,
+                nationality,
+            });
+            await manager.save();
 
-    // Step 2: Check if the manager already exists
-    let manager = await Manager.findOne({ telegramId: id });
+            // Create NPC players
+            const players = [];
+            const npcNames = ['Player1', 'Player2', 'Player3', 'Player4', 'Player5']; // Add logic for dynamic names
+            const npcNationality = nationality || 'International';
 
-    if (!manager) {
-        // Step 3: Create a new Manager entry if the user doesn't exist
-        manager = new Manager({
-            telegramId: id,
-            username: username || `User${id}`,
-            teamName: `${first_name}'s Team`,
-            nationality: 'International', // Default nationality for new users
-        });
-        await manager.save();
+            for (let i = 0; i < 5; i++) {
+                const player = new Player({
+                    name: npcNames[i],
+                    skill: Math.floor(Math.random() * 100) + 1,
+                    nationality: i < 4 ? npcNationality : 'International', // 4 players with team nationality
+                    teamId: manager._id,
+                });
+                players.push(player);
+            }
 
-        // Step 4: Create NPC players for the new manager
-        const nationalities = ['International', 'Sweden', 'USA', 'Germany'];
-        const players = [];
-        for (let i = 0; i < 5; i++) {
-            players.push(new Player({
-                name: `Player${i + 1}`,
-                skill: Math.floor(Math.random() * 100),
-                nationality: i < 4 ? manager.nationality : nationalities[Math.floor(Math.random() * nationalities.length)],
-                teamId: manager._id,
-            }));
+            await Player.insertMany(players);
         }
-        await Player.insertMany(players);
+
+        res.status(200).json({ message: 'Manager and players created successfully!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
     }
-
-    res.send(`Welcome, ${first_name || username}! Your team and players are ready.`);
 });
 
-// API Route to Fetch All Players
 app.get('/api/players', async (req, res) => {
-    const players = await Player.find();
-    res.json(players);
+    try {
+        const players = await Player.find();
+        res.json(players);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
-// API Route to Fetch All Managers
 app.get('/api/managers', async (req, res) => {
-    const managers = await Manager.find();
-    res.json(managers);
+    try {
+        const managers = await Manager.find();
+        res.json(managers);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Start Server
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
