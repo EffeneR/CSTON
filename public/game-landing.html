@@ -1,49 +1,60 @@
-<script>
-    const API_BASE_URL = 'https://cston.onrender.com/api';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Landing</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Welcome to the Game</h1>
+    <p>Your team is ready to compete!</p>
+    <div id="team-info"></div>
+    <p id="error-message" style="color: red; display: none;"></p>
+    <button id="logout-btn">Logout</button>
+    <script>
+        const API_BASE_URL = 'https://cston.onrender.com/api';
 
-    async function loadTeamInfo() {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            alert('No token found. Redirecting to login.');
+        async function loadTeamInfo() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`${API_BASE_URL}/player/team`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (response.status === 401) {
+                    document.getElementById('error-message').textContent = 'Authentication error. Please log in again.';
+                    document.getElementById('error-message').style.display = 'block';
+                    return;
+                }
+
+                const teamStatus = await response.json();
+
+                if (teamStatus.hasTeam) {
+                    document.getElementById('team-info').innerHTML = `
+                        <h3>${teamStatus.team.name}</h3>
+                        <p>Nationality: ${teamStatus.team.nationality}</p>
+                        <ul>
+                            ${teamStatus.team.players.map(player => `
+                                <li>${player.name} (${player.position}) - Skill: ${player.skillLevel}</li>
+                            `).join('')}
+                        </ul>`;
+                } else {
+                    document.getElementById('team-info').textContent = 'No team information available.';
+                }
+            } catch (error) {
+                console.error('Error loading team info:', error);
+                document.getElementById('error-message').textContent = 'Failed to load team info.';
+                document.getElementById('error-message').style.display = 'block';
+            }
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.clear();
             window.location.href = '/';
-            return;
-        }
+        });
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/player/team`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            if (response.status === 401) {
-                alert('Session expired. Please log in again.');
-                localStorage.clear();
-                window.location.href = '/';
-                return;
-            }
-
-            const teamStatus = await response.json();
-            if (teamStatus.hasTeam) {
-                document.getElementById('team-info').innerHTML = `
-                    <h3>${teamStatus.team.name}</h3>
-                    <p>Nationality: ${teamStatus.team.nationality}</p>
-                    <ul>
-                        ${teamStatus.team.players.map(player => `
-                            <li>${player.name} (${player.position}) - Skill: ${player.skillLevel}</li>
-                        `).join('')}
-                    </ul>`;
-            } else {
-                document.getElementById('team-info').textContent = 'No team information available.';
-            }
-        } catch (error) {
-            console.error('Error loading team info:', error);
-            alert('Failed to fetch team information.');
-        }
-    }
-
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        localStorage.clear();
-        window.location.href = '/';
-    });
-
-    loadTeamInfo();
-</script>
+        loadTeamInfo();
+    </script>
+</body>
+</html>
