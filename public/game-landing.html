@@ -10,6 +10,8 @@
     <h1>Welcome to the Game</h1>
     <p>Your team is ready to compete!</p>
     <div id="team-info"></div>
+    <button id="logout-btn">Logout</button>
+    <p id="error-message" style="color: red; display: none;"></p>
     <script>
         const API_BASE_URL = 'https://cston.onrender.com/api';
 
@@ -20,6 +22,7 @@
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const teamStatus = await response.json();
+
                 if (teamStatus.hasTeam) {
                     document.getElementById('team-info').innerHTML = `
                         <h3>${teamStatus.team.name}</h3>
@@ -34,11 +37,17 @@
                 }
             } catch (error) {
                 console.error('Error loading team info:', error);
+                document.getElementById('error-message').textContent = 'Failed to load team info.';
+                document.getElementById('error-message').style.display = 'block';
             }
         }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '/';
+        });
 
         loadTeamInfo();
     </script>
 </body>
 </html>
-
