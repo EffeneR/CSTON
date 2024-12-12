@@ -86,18 +86,11 @@ app.get('/api/auth/telegram', async (req, res) => {
     }
 });
 
-// Check Team Status
+// API to Check Team
 app.get('/api/player/team', async (req, res) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            return res.status(401).json({ message: 'Authorization header missing' });
-        }
-
-        const token = authHeader.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ message: 'Token missing' });
-        }
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) return res.status(401).json({ message: 'Token missing' });
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const player = await Player.findById(decoded.id).populate('teamId');
@@ -112,22 +105,9 @@ app.get('/api/player/team', async (req, res) => {
 
         res.status(200).json({ hasTeam: true, team: player.teamId });
     } catch (error) {
-        console.error('Error fetching team status:', error);
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ message: 'Invalid token' });
-        }
+        console.error('Error fetching team:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
-});
-
-// Team Creation Page
-app.get('/team-creation', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'team-creation.html'));
-});
-
-// Game Landing Page
-app.get('/game-landing', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'game-landing.html'));
 });
 
 // Serve Static Files
