@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
 
@@ -20,19 +20,18 @@ mongoose
     .then(() => console.log('Connected to MongoDB'))
     .catch((err) => console.error('MongoDB connection error:', err));
 
-// Player Schema
+// Models
 const playerSchema = new mongoose.Schema({
-    telegramId: String,
+    telegramId: { type: String, unique: true },
     username: String,
     avatar: String,
     matchesPlayed: { type: Number, default: 0 },
-    rank: { type: String, default: "Rookie" },
+    rank: { type: String, default: 'Rookie' },
     teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
-    lastLogin: { type: Date, default: Date.now }
+    lastLogin: { type: Date, default: Date.now },
 });
 const Player = mongoose.model('Player', playerSchema);
 
-// Team Schema
 const teamSchema = new mongoose.Schema({
     name: String,
     nationality: String,
@@ -40,84 +39,45 @@ const teamSchema = new mongoose.Schema({
         {
             name: String,
             position: String,
-            skillLevel: { type: Number, default: 20 }
-        }
+            skillLevel: { type: Number, default: 20 },
+        },
     ],
-    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' }
+    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Validate token middleware
-const validateToken = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        return res.status(401).json({ message: 'Authorization header missing' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-        return res.status(401).json({ message: 'Bearer token missing' });
-    }
-
+// Routes
+app.get('/api/players', async (req, res) => {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
+        const players = await Player.find();
+        res.json(players);
     } catch (error) {
-        console.error('Token verification failed:', error.message);
-        return res.status(401).json({ message: 'Invalid or expired token' });
-    }
-};
-
-// API to get team info
-app.get('/api/player/team', validateToken, async (req, res) => {
-    try {
-        const player = await Player.findById(req.user.id).populate('teamId');
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-        }
-        if (!player.teamId) {
-            return res.status(200).json({ hasTeam: false });
-        }
-        res.status(200).json({ hasTeam: true, team: player.teamId });
-    } catch (error) {
-        console.error('Error fetching team info:', error.message);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error fetching players:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 
-// Redirect from Telegram authentication
-app.get('/api/auth/telegram', async (req, res) => {
+app.post('/api/players', async (req, res) => {
     try {
-        const { hash, ...data } = req.query;
-        const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
-        const checkString = Object.keys(data).sort().map(key => `${key}=${data[key]}`).join('\n');
-        const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
+        const { telegramId, username, avatar } = req.body;
 
-        if (hash !== hmac) {
-            return res.status(403).send('Invalid authentication.');
+        if (!telegramId || !username) {
+            return res.status(400).json({ message: 'Missing required fields' });
         }
 
-        let player = await Player.findOne({ telegramId: data.id });
+        let player = await Player.findOne({ telegramId });
         if (!player) {
-            player = new Player({
-                telegramId: data.id,
-                username: data.username,
-                avatar: data.photo_url
-            });
+            player = new Player({ telegramId, username, avatar });
             await player.save();
         }
-
-        const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        res.redirect(`/team-creation.html?token=${token}`);
+        res.json(player);
     } catch (error) {
-        console.error('Authentication error:', error.message);
-        res.status(500).send('Internal server error.');
+        console.error('Error creating player:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 
-// Static Files
+// Static file serving
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Start Server
