@@ -86,6 +86,11 @@ app.get('/api/auth/telegram', async (req, res) => {
     }
 });
 
+// Dashboard
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
 // Team Creation Page
 app.get('/team-creation', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'team-creation.html'));
@@ -100,7 +105,9 @@ app.get('/game-landing', (req, res) => {
 app.get('/api/player/team', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
-        if (!authHeader) return res.status(401).json({ message: 'Authorization header missing' });
+        if (!authHeader) {
+            return res.status(401).json({ message: 'Authorization header missing.' });
+        }
 
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -116,8 +123,8 @@ app.get('/api/player/team', async (req, res) => {
 
         res.status(200).json({ hasTeam: true, team: player.teamId });
     } catch (error) {
-        console.error('Error fetching team status:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error verifying token or fetching player:', error);
+        res.status(401).json({ message: 'Invalid or expired token.' });
     }
 });
 
