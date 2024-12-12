@@ -113,10 +113,22 @@ app.get('/api/player/team', async (req, res) => {
         }
 
         if (!player.teamId) {
-            return res.status(200).json({ hasTeam: false });
+            return res.status(200).json({ hasTeam: false, message: 'No team assigned yet.' });
         }
 
-        res.status(200).json({ hasTeam: true, team: player.teamId });
+        const team = await Team.findById(player.teamId);
+        if (!team) {
+            return res.status(200).json({ hasTeam: false, message: 'No team information available.' });
+        }
+
+        res.status(200).json({
+            hasTeam: true,
+            team: {
+                name: team.name,
+                nationality: team.nationality,
+                players: team.players,
+            },
+        });
     } catch (error) {
         console.error('Error fetching team:', error);
         res.status(500).json({ message: 'Internal server error' });
