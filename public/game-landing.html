@@ -21,8 +21,6 @@
                 const response = await fetch(`${API_BASE_URL}/player/team`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!response.ok) throw new Error(await response.text());
-
                 const teamStatus = await response.json();
 
                 if (teamStatus.hasTeam) {
@@ -35,7 +33,7 @@
                             `).join('')}
                         </ul>`;
                 } else {
-                    document.getElementById('team-info').textContent = 'No team information available.';
+                    window.location.href = '/team-creation?token=' + token;
                 }
             } catch (error) {
                 console.error('Error loading team info:', error);
