@@ -3,7 +3,7 @@ const API_BASE_URL = 'https://cston.onrender.com/api';
 async function authenticateTelegram(data) {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/telegram`, {
-            method: 'POST',
+            method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         });
@@ -13,35 +13,40 @@ async function authenticateTelegram(data) {
     }
 }
 
-function redirectToDashboard(token, username) {
+function redirectToPage(token, username, page) {
     localStorage.setItem('token', token);
     localStorage.setItem('username', username);
-    window.location.href = '/dashboard';
+    window.location.href = page;
 }
 
-function setupUI() {
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
+async function checkRedirection() {
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    if (!token || !username) return;
 
-    loginBtn.addEventListener('click', () => {
-        // Trigger Telegram Login
-        const telegramLoginUrl = `https://t.me/CSTON_BOT?start=login`;
-        window.open(telegramLoginUrl, '_self');
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/player/team`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
 
-    logoutBtn.addEventListener('click', () => {
-        localStorage.clear();
-        window.location.href = '/';
-    });
+        if (data.hasTeam) {
+            redirectToPage(token, username, '/game-landing');
+        } else {
+            redirectToPage(token, username, '/team-creation');
+        }
+    } catch (error) {
+        console.error('Error during redirection:', error);
+    }
 }
 
-async function initializeApp() {
+function initializeApp() {
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
 
     if (token && username) {
         document.getElementById('username').textContent = username;
-        document.getElementById('logged-in-as').style.display = 'block';
+        checkRedirection();
     } else {
         document.getElementById('login-btn').style.display = 'block';
     }
