@@ -8,7 +8,6 @@
 </head>
 <body>
     <h1>Welcome to the Game</h1>
-    <p>Your team is ready to compete!</p>
     <div id="team-info"></div>
     <button id="logout-btn">Logout</button>
     <p id="error-message" style="color: red; display: none;"></p>
@@ -25,6 +24,7 @@
 
                 if (teamStatus.hasTeam) {
                     document.getElementById('team-info').innerHTML = `
+                        <h2>Your Team</h2>
                         <h3>${teamStatus.team.name}</h3>
                         <p>Nationality: ${teamStatus.team.nationality}</p>
                         <ul>
@@ -33,7 +33,8 @@
                             `).join('')}
                         </ul>`;
                 } else {
-                    document.getElementById('team-info').textContent = 'No team information available.';
+                    // Redirect to team creation if no team exists
+                    window.location.href = `/team-creation?token=${token}`;
                 }
             } catch (error) {
                 console.error('Error loading team info:', error);
