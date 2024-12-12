@@ -9,22 +9,34 @@
 <body>
     <h1>Welcome to the Game</h1>
     <p>Your team is ready to compete!</p>
-    <div id="team-info"></div>
-    <p id="error-message" style="color: red; display: none;"></p>
+    <div id="team-info">Loading...</div>
     <button id="logout-btn">Logout</button>
     <script>
         const API_BASE_URL = 'https://cston.onrender.com/api';
 
         async function loadTeamInfo() {
             const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Missing token. Please log in again.');
+                window.location.href = '/';
+                return;
+            }
+
             try {
                 const response = await fetch(`${API_BASE_URL}/player/team`, {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
                 });
 
-                if (response.status === 401) {
-                    document.getElementById('error-message').textContent = 'Authentication error. Please log in again.';
-                    document.getElementById('error-message').style.display = 'block';
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Unauthorized. Please log in again.');
+                        localStorage.clear();
+                        window.location.href = '/';
+                    } else {
+                        throw new Error(`Error: ${response.statusText}`);
+                    }
                     return;
                 }
 
@@ -43,9 +55,8 @@
                     document.getElementById('team-info').textContent = 'No team information available.';
                 }
             } catch (error) {
-                console.error('Error loading team info:', error);
-                document.getElementById('error-message').textContent = 'Failed to load team info.';
-                document.getElementById('error-message').style.display = 'block';
+                console.error('Error loading team info:', error.message);
+                document.getElementById('team-info').textContent = 'Failed to load team information.';
             }
         }
 
