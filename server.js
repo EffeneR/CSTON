@@ -86,6 +86,19 @@ app.get('/api/auth/telegram', async (req, res) => {
     }
 });
 
+// Serve Static Files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Team Creation Page
+app.get('/team-creation', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'team-creation.html'));
+});
+
+// Game Landing Page
+app.get('/game-landing', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'game-landing.html'));
+});
+
 // API to Check Team
 app.get('/api/player/team', async (req, res) => {
     try {
@@ -109,9 +122,6 @@ app.get('/api/player/team', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-
-// Serve Static Files
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Start Server
 const PORT = process.env.PORT || 5000;
