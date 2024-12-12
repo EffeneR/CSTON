@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Creation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Create Your Team</h1>
+    <form id="team-creation-form">
+        <label for="team-name">Team Name:</label>
+        <input type="text" id="team-name" required>
+        
+        <label for="team-nationality">Nationality:</label>
+        <input type="text" id="team-nationality" required>
+        
+        <button type="submit">Create Team</button>
+    </form>
+    <script>
+        const API_BASE_URL = 'https://cston.onrender.com/api';
+
+        document.getElementById('team-creation-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const token = localStorage.getItem('token');
+            const teamName = document.getElementById('team-name').value;
+            const teamNationality = document.getElementById('team-nationality').value;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/team/create`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        Authorization: `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ name: teamName, nationality: teamNationality }),
+                });
+
+                const result = await response.json();
+                if (result.team) {
+                    alert('Team created successfully!');
+                    window.location.href = '/game-landing';
+                } else {
+                    alert(result.message || 'Failed to create team');
+                }
+            } catch (error) {
+                console.error('Error creating team:', error);
+            }
+        });
+    </script>
+</body>
+</html>
 
