@@ -1,24 +1,5 @@
 const API_BASE_URL = 'https://cston.onrender.com/api';
 
-async function authenticateTelegram(data) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/auth/telegram`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        return response.json();
-    } catch (error) {
-        console.error('Error during Telegram authentication:', error);
-    }
-}
-
-function redirectToPage(token, username, page) {
-    localStorage.setItem('token', token);
-    localStorage.setItem('username', username);
-    window.location.href = page;
-}
-
 async function checkRedirection() {
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
@@ -31,9 +12,9 @@ async function checkRedirection() {
         const data = await response.json();
 
         if (data.hasTeam) {
-            redirectToPage(token, username, '/game-landing');
+            window.location.href = '/game-landing';
         } else {
-            redirectToPage(token, username, '/team-creation');
+            window.location.href = '/team-creation';
         }
     } catch (error) {
         console.error('Error during redirection:', error);
