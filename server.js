@@ -1,79 +1,67 @@
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
-const path = require("path");
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const path = require('path');
 
+// Load environment variables
+dotenv.config();
+
+// Import routes
+const managerRoutes = require('./routes/managers');
+const playerRoutes = require('./routes/players');
+const teamRoutes = require('./routes/teams');
+
+// Initialize the app
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 10000; // Render assigns a PORT
 
-// MongoDB connection
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+
+// Database Connection
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+    .connect(process.env.MONGO_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    })
+    .then(() => console.log('✅ Connected to MongoDB'))
+    .catch((err) => {
+        console.error('❌ Database connection error:', err.message);
+    });
 
-// Models
-const Player = require("./models/Player");
+// Static File Serving (if needed for front-end assets)
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Middleware to verify JWT
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "Access denied, token missing!" });
-
-  try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified;
-    next();
-  } catch (err) {
-    res.status(400).json({ error: "Invalid token" });
-  }
-};
-
-// Routes
-app.get("/api/players", async (req, res) => {
-  try {
-    const players = await Player.find();
-    res.json(players);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Health Check Route for Render
+app.get('/health', (req, res) => {
+    res.status(200).send('Health Check OK');
 });
 
-app.post("/api/players", verifyToken, async (req, res) => {
-  try {
-    const { username, telegramId } = req.body;
-    const newPlayer = new Player({ username, telegramId });
-    const savedPlayer = await newPlayer.save();
-    res.json(savedPlayer);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Default Route
+app.get('/', (req, res) => {
+    res.send('Welcome to the CSTON Mini App API');
 });
 
-app.get("/api/auth/telegram", async (req, res) => {
-  const { id, first_name, username, photo_url } = req.query;
-  if (!id || !username) {
-    return res.status(400).json({ error: "Invalid Telegram data" });
-  }
+// API Routes
+app.use('/api/managers', managerRoutes); // Routes for managing managers
+app.use('/api/players', playerRoutes); // Routes for NPC players
+app.use('/api/teams', teamRoutes); // Routes for managing teams
 
-  try {
-    const token = jwt.sign({ id, username }, process.env.JWT_SECRET, { expiresIn: "1h" });
-    res.json({ token });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Catch-All Route for Undefined Routes
+app.all('*', (req, res) => {
+    res.status(404).json({ error: 'Route not found' });
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, "public")));
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err.stack);
+    res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Start the server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Start Server
+app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+});
