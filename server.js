@@ -47,7 +47,7 @@ const teamSchema = new mongoose.Schema({
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Verify Telegram and Issue JWT (GET Handler)
+// Verify Telegram and Redirect
 app.get('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.query;
@@ -76,7 +76,7 @@ app.get('/api/auth/telegram', async (req, res) => {
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        // Check team status and redirect
+        // Redirect to appropriate page
         const redirectTo = player.teamId ? '/game-landing' : '/team-creation';
         const redirectUrl = `${redirectTo}?token=${token}&username=${data.username}`;
         res.redirect(redirectUrl);
@@ -84,6 +84,21 @@ app.get('/api/auth/telegram', async (req, res) => {
         console.error('Telegram authentication error:', error);
         res.status(500).send('Internal server error');
     }
+});
+
+// Dashboard
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Team Creation Page
+app.get('/team-creation', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'team-creation.html'));
+});
+
+// Game Landing Page
+app.get('/game-landing', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'game-landing.html'));
 });
 
 // Check Team Status
