@@ -35,24 +35,46 @@ async function fetchTeamStatus() {
     }
 }
 
+function setupUI() {
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const loggedInAs = document.getElementById('logged-in-as');
+    const usernameSpan = document.getElementById('username');
+    const teamInfo = document.getElementById('team-info');
+
+    loginBtn.addEventListener('click', () => {
+        const telegramLoginUrl = `https://t.me/CSTON_BOT?start=login`;
+        window.open(telegramLoginUrl, '_self');
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        clearUserSession();
+    });
+}
+
 async function initializeApp() {
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
 
     if (token && username) {
-        document.getElementById('logged-in-as').textContent = `Logged in as ${username}`;
+        document.getElementById('logged-in-as').style.display = 'block';
+        document.getElementById('username').textContent = username;
+
         const teamStatus = await fetchTeamStatus();
         if (teamStatus.hasTeam) {
-            document.getElementById('team-info').innerText = `Team: ${teamStatus.team.name}`;
+            document.getElementById('team-info').innerHTML = `
+                <h3>${teamStatus.team.name}</h3>
+                <p>Nationality: ${teamStatus.team.nationality}</p>
+                <ul>
+                    ${teamStatus.team.players.map(player => `
+                        <li>${player.name} (${player.position}) - Skill: ${player.skillLevel}</li>
+                    `).join('')}
+                </ul>`;
         } else {
-            document.getElementById('team-info').innerText = 'No team yet.';
+            teamInfo.innerHTML = 'No team yet.';
         }
     } else {
-        document.getElementById('login-btn').addEventListener('click', async () => {
-            const telegramData = { /* simulate Telegram data */ };
-            const { token, username } = await authenticateTelegram(telegramData);
-            redirectToDashboard(token, username);
-        });
+        document.getElementById('login-btn').style.display = 'block';
     }
 }
 
