@@ -78,17 +78,12 @@ app.get('/api/auth/telegram', async (req, res) => {
 
         // Redirect to appropriate page
         const redirectTo = player.teamId ? '/game-landing' : '/team-creation';
-        const redirectUrl = `${redirectTo}?token=${token}&username=${data.username}`;
+        const redirectUrl = `${redirectTo}?token=${token}`;
         res.redirect(redirectUrl);
     } catch (error) {
         console.error('Telegram authentication error:', error);
         res.status(500).send('Internal server error');
     }
-});
-
-// Dashboard
-app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // Team Creation Page
@@ -104,7 +99,12 @@ app.get('/game-landing', (req, res) => {
 // Check Team Status
 app.get('/api/player/team', async (req, res) => {
     try {
-        const token = req.headers.authorization.split(' ')[1];
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ message: 'Authorization header missing' });
+        }
+
+        const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const player = await Player.findById(decoded.id).populate('teamId');
 
@@ -113,24 +113,12 @@ app.get('/api/player/team', async (req, res) => {
         }
 
         if (!player.teamId) {
-            return res.status(200).json({ hasTeam: false, message: 'No team assigned yet.' });
+            return res.status(200).json({ hasTeam: false });
         }
 
-        const team = await Team.findById(player.teamId);
-        if (!team) {
-            return res.status(200).json({ hasTeam: false, message: 'No team information available.' });
-        }
-
-        res.status(200).json({
-            hasTeam: true,
-            team: {
-                name: team.name,
-                nationality: team.nationality,
-                players: team.players,
-            },
-        });
+        res.status(200).json({ hasTeam: true, team: player.teamId });
     } catch (error) {
-        console.error('Error fetching team:', error);
+        console.error('Error fetching team:', error.message);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
