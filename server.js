@@ -1,113 +1,109 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const path = require('path');
 const dotenv = require('dotenv');
+
+// Load environment variables
 dotenv.config();
 
-const Player = require('./models/player');
-const Manager = require('./models/manager');
-
+// Initialize app
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Database Connection
-mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+    .then(() => console.log('Connected to MongoDB'))
+    .catch((err) => console.error('Database connection error:', err));
+
+// Models
+const Manager = require('./models/manager'); // For managing team owners (Telegram users)
+const Player = require('./models/player');   // For NPC players
+const Team = require('./models/team');       // For team management
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
+
+// Root route
 app.get('/', (req, res) => {
-  res.send('<h1>Welcome to the CSTON Mini App</h1><p>Use API routes to interact with the app.</p>');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Routes for Managers
-app.post('/api/managers/register', async (req, res) => {
-  const { telegramId, username, teamName, teamNationality } = req.body;
+// Manager registration route
+app.post('/api/manager/register', async (req, res) => {
+    const { telegramId, username, teamName, nationality } = req.body;
 
-  try {
-    // Check if manager exists
-    let manager = await Manager.findOne({ telegramId });
-    if (manager) {
-      return res.status(400).json({ error: 'Manager already exists' });
+    try {
+        // Check if manager already exists
+        let manager = await Manager.findOne({ telegramId });
+
+        if (!manager) {
+            // Create new manager
+            manager = new Manager({ telegramId, username, teamName, nationality });
+            await manager.save();
+
+            // Automatically generate NPC players
+            const players = [];
+            for (let i = 0; i < 5; i++) {
+                players.push(new Player({
+                    name: `Player${i + 1}`,
+                    skill: Math.floor(Math.random() * 100),
+                    nationality: i < 4 ? nationality : 'International', // At least 4 players from the team nationality
+                    teamId: manager._id,
+                }));
+            }
+            await Player.insertMany(players);
+
+            res.status(201).json({ message: 'Manager and team created successfully', manager });
+        } else {
+            res.status(400).json({ message: 'Manager already exists' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error registering manager', error });
     }
+});
 
-    // Create manager
-    manager = new Manager({
-      telegramId,
-      username,
-      teamName,
-      teamNationality,
-    });
-
-    await manager.save();
-
-    // Automatically assign players
-    const players = [];
-    for (let i = 0; i < 5; i++) {
-      const isSameNationality = i < 4; // First 4 players match team nationality
-      const nationality = isSameNationality ? teamNationality : 'Random';
-
-      const player = new Player({
-        managerId: manager._id,
-        name: generateRandomName(),
-        nationality,
-        skill: generateRandomSkill(),
-      });
-
-      await player.save();
-      players.push(player);
+// Fetch manager details
+app.get('/api/manager/:id', async (req, res) => {
+    try {
+        const manager = await Manager.findById(req.params.id).populate('players');
+        if (!manager) {
+            return res.status(404).json({ message: 'Manager not found' });
+        }
+        res.json(manager);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching manager details', error });
     }
-
-    res.json({ manager, players });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to register manager' });
-  }
 });
 
-// Route to Get All Managers
-app.get('/api/managers', async (req, res) => {
-  try {
-    const managers = await Manager.find();
-    res.json(managers);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch managers' });
-  }
-});
-
-// Routes for Players
+// Fetch players
 app.get('/api/players', async (req, res) => {
-  try {
-    const players = await Player.find();
-    res.json(players);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch players' });
-  }
+    try {
+        const players = await Player.find();
+        res.json(players);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching players', error });
+    }
 });
 
-// Utilities for NPC Player Generation
-function generateRandomName() {
-  const firstNames = ['Alex', 'Chris', 'Taylor', 'Jordan', 'Morgan'];
-  const lastNames = ['Smith', 'Johnson', 'Brown', 'Williams', 'Jones'];
-  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-  return `${firstName} ${lastName}`;
-}
+// Telegram authentication route
+app.get('/auth/telegram', (req, res) => {
+    res.send('Telegram login functionality coming soon.');
+});
 
-function generateRandomSkill() {
-  return Math.floor(Math.random() * 101); // Skill between 0 and 100
-}
-
-// 404 Error for Undefined Routes
+// Catch-all route for undefined endpoints
 app.use((req, res) => {
-  res.status(404).send('Route not found');
+    res.status(404).send('Endpoint not found');
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
