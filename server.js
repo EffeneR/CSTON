@@ -47,19 +47,53 @@ const teamSchema = new mongoose.Schema({
 });
 const Team = mongoose.model('Team', teamSchema);
 
-// Verify Telegram and Redirect
+// Validate token middleware
+const validateToken = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ message: 'Authorization header missing' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ message: 'Bearer token missing' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        console.error('Token verification failed:', error.message);
+        return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+};
+
+// API to get team info
+app.get('/api/player/team', validateToken, async (req, res) => {
+    try {
+        const player = await Player.findById(req.user.id).populate('teamId');
+        if (!player) {
+            return res.status(404).json({ message: 'Player not found' });
+        }
+        if (!player.teamId) {
+            return res.status(200).json({ hasTeam: false });
+        }
+        res.status(200).json({ hasTeam: true, team: player.teamId });
+    } catch (error) {
+        console.error('Error fetching team info:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Redirect from Telegram authentication
 app.get('/api/auth/telegram', async (req, res) => {
     try {
         const { hash, ...data } = req.query;
-
-        if (!hash || !data.id) {
-            return res.status(400).send('Missing required parameters.');
-        }
-
-        // Validate Payload
         const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
         const checkString = Object.keys(data).sort().map(key => `${key}=${data[key]}`).join('\n');
         const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
+
         if (hash !== hmac) {
             return res.status(403).send('Invalid authentication.');
         }
@@ -76,52 +110,15 @@ app.get('/api/auth/telegram', async (req, res) => {
 
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        // Redirect to appropriate page
-        const redirectTo = player.teamId ? '/game-landing.html' : '/team-creation.html';
-        const redirectUrl = `${redirectTo}?token=${token}&username=${data.username}`;
-        res.redirect(redirectUrl);
+        res.redirect(`/team-creation.html?token=${token}`);
     } catch (error) {
-        console.error('Telegram authentication error:', error);
-        res.status(500).send('Internal server error');
+        console.error('Authentication error:', error.message);
+        res.status(500).send('Internal server error.');
     }
 });
 
-// Serve Static Files
+// Static Files
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Route for Team Creation Page
-app.get('/team-creation.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'team-creation.html'));
-});
-
-// Route for Game Landing Page
-app.get('/game-landing.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'game-landing.html'));
-});
-
-// Fetch Player's Team
-app.get('/api/player/team', async (req, res) => {
-    try {
-        const token = req.headers.authorization.split(' ')[1];
-        if (!token) return res.status(401).json({ message: 'Token is missing' });
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const player = await Player.findById(decoded.id).populate('teamId');
-
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
-        }
-
-        if (!player.teamId) {
-            return res.status(200).json({ hasTeam: false });
-        }
-
-        res.status(200).json({ hasTeam: true, team: player.teamId });
-    } catch (error) {
-        console.error('Error fetching team:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
 
 // Start Server
 const PORT = process.env.PORT || 5000;
