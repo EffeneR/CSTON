@@ -1,28 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CSTON Mini App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSTON Mini App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        .button {
+            background-color: #0088cc;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            margin: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #005f99;
+        }
+    </style>
 </head>
 <body>
-  <h1>Welcome to the Game</h1>
-  <p>Your team is ready to compete!</p>
-  <div id="team-info">No team information available.</div>
-  <script>
-    fetch("/api/players")
-      .then((response) => response.json())
-      .then((players) => {
-        const teamInfo = document.getElementById("team-info");
-        if (players.length === 0) {
-          teamInfo.textContent = "No team information available.";
-        } else {
-          teamInfo.textContent = `Players: ${players.map((p) => p.username).join(", ")}`;
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  </script>
+    <h1>Welcome to the CSTON Mini App</h1>
+    <p>Manage your team and compete in matches!</p>
+    <a href="/auth/telegram" class="button">Log in with Telegram</a>
 </body>
 </html>
