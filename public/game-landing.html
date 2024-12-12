@@ -8,6 +8,7 @@
 </head>
 <body>
     <h1>Welcome to the Game</h1>
+    <p>Your team is ready to compete!</p>
     <div id="team-info"></div>
     <button id="logout-btn">Logout</button>
     <p id="error-message" style="color: red; display: none;"></p>
@@ -20,11 +21,15 @@
                 const response = await fetch(`${API_BASE_URL}/player/team`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
+                if (response.status === 401) {
+                    document.getElementById('error-message').textContent = 'Authorization failed. Please log in again.';
+                    document.getElementById('error-message').style.display = 'block';
+                    return;
+                }
                 const teamStatus = await response.json();
 
                 if (teamStatus.hasTeam) {
                     document.getElementById('team-info').innerHTML = `
-                        <h2>Your Team</h2>
                         <h3>${teamStatus.team.name}</h3>
                         <p>Nationality: ${teamStatus.team.nationality}</p>
                         <ul>
@@ -33,11 +38,10 @@
                             `).join('')}
                         </ul>`;
                 } else {
-                    // Redirect to team creation if no team exists
-                    window.location.href = `/team-creation?token=${token}`;
+                    document.getElementById('team-info').textContent = 'No team information available.';
                 }
             } catch (error) {
-                console.error('Error loading team info:', error);
+                console.error('Error loading team info:', error.message);
                 document.getElementById('error-message').textContent = 'Failed to load team info.';
                 document.getElementById('error-message').style.display = 'block';
             }
