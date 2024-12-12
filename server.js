@@ -77,7 +77,7 @@ app.get('/api/auth/telegram', async (req, res) => {
         const token = jwt.sign({ id: player._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         // Redirect to appropriate page
-        const redirectTo = player.teamId ? '/game-landing' : '/team-creation';
+        const redirectTo = player.teamId ? '/game-landing.html' : '/team-creation.html';
         const redirectUrl = `${redirectTo}?token=${token}&username=${data.username}`;
         res.redirect(redirectUrl);
     } catch (error) {
@@ -89,21 +89,21 @@ app.get('/api/auth/telegram', async (req, res) => {
 // Serve Static Files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Team Creation Page
-app.get('/team-creation', (req, res) => {
+// Route for Team Creation Page
+app.get('/team-creation.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'team-creation.html'));
 });
 
-// Game Landing Page
-app.get('/game-landing', (req, res) => {
+// Route for Game Landing Page
+app.get('/game-landing.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'game-landing.html'));
 });
 
-// API to Check Team
+// Fetch Player's Team
 app.get('/api/player/team', async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token) return res.status(401).json({ message: 'Token missing' });
+        const token = req.headers.authorization.split(' ')[1];
+        if (!token) return res.status(401).json({ message: 'Token is missing' });
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const player = await Player.findById(decoded.id).populate('teamId');
