@@ -1,67 +1,87 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
+const express = require("express");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const bodyParser = require("body-parser");
+const cors = require("cors");
 
-// Load environment variables
+// Models
+const Player = require("./models/player");
+const Manager = require("./models/manager");
+const Team = require("./models/team");
+
 dotenv.config();
 
-// Import routes
-const managerRoutes = require('./routes/managers');
-const playerRoutes = require('./routes/players');
-const teamRoutes = require('./routes/teams');
-
-// Initialize the app
 const app = express();
-const PORT = process.env.PORT || 10000; // Render assigns a PORT
-
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// Database Connection
-mongoose
-    .connect(process.env.MONGO_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    })
-    .then(() => console.log('✅ Connected to MongoDB'))
-    .catch((err) => {
-        console.error('❌ Database connection error:', err.message);
-    });
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
-// Static File Serving (if needed for front-end assets)
-app.use(express.static(path.join(__dirname, 'public')));
+// Route: Register a manager and auto-create team and players
+app.post("/api/register", async (req, res) => {
+    const { telegramId, username, teamName, teamNationality } = req.body;
 
-// Health Check Route for Render
-app.get('/health', (req, res) => {
-    res.status(200).send('Health Check OK');
+    try {
+        // Check if manager already exists
+        let manager = await Manager.findOne({ telegramId });
+        if (!manager) {
+            manager = new Manager({ telegramId, username });
+            await manager.save();
+        }
+
+        // Check if team already exists
+        let team = await Team.findOne({ managerId: manager._id });
+        if (!team) {
+            // Create team
+            team = new Team({
+                managerId: manager._id,
+                name: teamName,
+                nationality: teamNationality,
+            });
+            await team.save();
+
+            // Auto-create NPC players
+            const players = [];
+            for (let i = 0; i < 5; i++) {
+                players.push(
+                    new Player({
+                        teamId: team._id,
+                        name: `Player ${i + 1}`,
+                        nationality: i < 4 ? teamNationality : "International", // 4 players with team nationality
+                        skill: Math.floor(Math.random() * 100), // Random skill 0-99
+                    })
+                );
+            }
+            await Player.insertMany(players);
+        }
+
+        res.status(200).json({ message: "Registration successful", team, players });
+    } catch (error) {
+        console.error("Error in registration:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 });
 
-// Default Route
-app.get('/', (req, res) => {
-    res.send('Welcome to the CSTON Mini App API');
-});
+// Route: Get all players for a team
+app.get("/api/players/:teamId", async (req, res) => {
+    const { teamId } = req.params;
 
-// API Routes
-app.use('/api/managers', managerRoutes); // Routes for managing managers
-app.use('/api/players', playerRoutes); // Routes for NPC players
-app.use('/api/teams', teamRoutes); // Routes for managing teams
-
-// Catch-All Route for Undefined Routes
-app.all('*', (req, res) => {
-    res.status(404).json({ error: 'Route not found' });
-});
-
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-    console.error('Error:', err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
+    try {
+        const players = await Player.find({ teamId });
+        res.status(200).json(players);
+    } catch (error) {
+        console.error("Error fetching players:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 });
 
 // Start Server
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
